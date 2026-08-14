@@ -7,31 +7,34 @@
 function resize(){let z=c.getBoundingClientRect();W=z.width;H=z.height;d=Math.min(devicePixelRatio||1,2);c.width=W*d;c.height=H*d;x.setTransform(d,0,0,d,0,0)}addEventListener('resize',resize);resize();function T(){return{x:W*.08,y:H*.19,w:W*.84,h:H*.53,net:H*.455}}function ui(){p.textContent=ps;q.textContent=qs;r.textContent=rally;games.textContent='G'+gn+'　'+pg+' - '+qg}function say(s,t=700){msg.textContent=s;clearTimeout(say.t);if(t)say.t=setTimeout(()=>msg.textContent='',t)}function on(){let t=T();return b.x>=t.x&&b.x<=t.x+t.w&&b.y>=t.y&&b.y<=t.y+t.h}
 function point(w){if(w==='p')ps++;else qs++;ui();say(w==='p'?'POINT!':'CPU POINT');if((ps>=11||qs>=11)&&Math.abs(ps-qs)>=2){let gw=ps>qs?'p':'q';gw==='p'?pg++:qg++;ui();let done=pg>=2||qg>=2;phase=done?'matchover':'gameover';over.style.display='flex';ot.textContent=done?(pg>qg?'🏆 MATCH WIN':'MATCH LOST'):(gw==='p'?'GAME WON':'GAME LOST');tx.textContent=done?'3ゲームマッチ '+pg+' - '+qg:'ゲーム'+gn+'　'+ps+' - '+qs;next.textContent=done?'もう一度':'次のゲーム';return}serves++;if(serves>=2){serves=0;server=server==='p'?'q':'p'}resetPoint()}
 function resetPoint(){phase='serve';b.b1=b.b2=false;b.serve=false;serve.style.display=server==='p'?'block':'none';say(server==='p'?'あなたのサーブ':'CPUサーブ',0);if(server==='q')setTimeout(cpuServe,650)}function resetGame(){ps=qs=0;serves=0;server='p';rally=0;resetPoint()}function newMatch(){pg=qg=0;gn=1;resetGame()}
-function playerServe(){if(phase!=='serve'||server!=='p')return;let t=T();serve.style.display='none';Object.assign(b,{x:t.x+t.w/2,y:t.net+t.h*.22,z:.035,vx:(Math.random()-.5)*.05,vy:-3.0,vz:.032,receiver:'q',serve:true,b1:false,b2:false});phase='flight';say('SERVE!',550)}
-function cpuServe(){if(phase!=='serve'||server!=='q')return;let t=T();Object.assign(b,{x:t.x+t.w/2,y:t.net-t.h*.22,z:.035,vx:(Math.random()-.5)*.05,vy:3.0,vz:.032,receiver:'p',serve:true,b1:false,b2:false});phase='flight';say('CPU SERVE',550)}
-function hit(type,dx){if(phase!=='rally'||b.receiver!=='p')return;missTimer=0;let t=T(),pow={drive:1.12,push:.92,flick:1.18,smash:1.35}[type],target=Math.max(t.x+t.w*.06,Math.min(t.x+t.w*.94,b.x+dx*.65*t.w));b.vx=(target-b.x)*.11*pow;b.vy=-(2.7+.28*pow);b.vz=.030+.008*pow;b.receiver='q';rally++;ui();say(type.toUpperCase(),250)}
-function cpuHit(){if(phase!=='rally'||b.receiver!=='q')return;let t=T();if(Math.random()<.045)return point('p');let target=t.x+t.w*(.10+Math.random()*.80);b.vx=(target-b.x)*.11;b.vy=2.7+Math.random()*.35;b.vz=.030+Math.random()*.008;b.receiver='p';rally++;ui()}
-function physics(dt){let t=T();if(phase!=='flight'&&phase!=='rally')return;b.x+=b.vx*dt*60;b.y+=b.vy*dt*60;b.z+=b.vz*dt*60;b.vz-=.0022*dt*60;if(b.z<0)b.z=0;
+function playerServe(){if(phase!=='serve'||server!=='p')return;let t=T();serve.style.display='none';let target=t.x+t.w*(.18+Math.random()*.64);Object.assign(b,{x:t.x+t.w*(.25+Math.random()*.5),y:t.net+t.h*.22,z:.035,vx:(target-(t.x+t.w*.5))*.008,vy:-2.55,vz:.040,receiver:'q',serve:true,b1:false,b2:false});phase='flight';say('SERVE!',550)}
+function cpuServe(){if(phase!=='serve'||server!=='q')return;let t=T();let target=t.x+t.w*(.18+Math.random()*.64);Object.assign(b,{x:t.x+t.w*(.25+Math.random()*.5),y:t.net-t.h*.22,z:.035,vx:(target-(t.x+t.w*.5))*.008,vy:2.55,vz:.040,receiver:'p',serve:true,b1:false,b2:false});phase='flight';say('CPU SERVE',550)}
+function hit(type,dx){if(phase!=='rally'||b.receiver!=='p')return;missTimer=0;let t=T(),pow={drive:1.18,push:.95,flick:1.25,smash:1.42}[type],target=Math.max(t.x+t.w*.06,Math.min(t.x+t.w*.94,b.x+dx*1.05*t.w));b.vx=(target-b.x)*.085*pow;b.vy=-2.95-.22*pow;b.vz=.038+.006*pow;b.receiver='q';rally++;ui();say(type.toUpperCase(),250)}
+function cpuHit(){if(phase!=='rally'||b.receiver!=='q')return;let t=T();if(Math.random()<.045){point('p');return}let target=t.x+t.w*(.08+Math.random()*.84);b.vx=(target-b.x)*.085;b.vy=2.95+Math.random()*.35;b.vz=.038+Math.random()*.007;b.receiver='p';rally++;ui()}
+function physics(dt){let t=T();if(phase!=='flight'&&phase!=='rally')return;let step=dt*60;b.x+=b.vx*step;b.y+=b.vy*step;b.z+=b.vz*step;b.vz-=.0020*step;if(b.z<0)b.z=0;
 if(phase==='flight'){
- if(b.serve&&b.receiver==='q'){
-  if(!b.b1&&b.z<=.001){if(b.y>t.net&&on()){b.b1=true;b.vz=.032; b.vy=-3.0;say('自陣バウンド',300)}else return point('q')}
-  if(b.b1&&!b.b2&&b.z<=.001&&b.y<=t.net){if(on()){b.b2=true;phase='rally';b.receiver='q';say('PLAY!',300)}else return point('q')}
-  if(b.b1&&!b.b2&&b.y<=t.y){return point('q')}
-  if(b.y<t.y-t.h*.08||b.x<t.x||b.x>t.x+t.w)return point('q')
+ if(b.receiver==='q'){
+  if(!b.b1&&b.z<=.001){if(b.y>t.net&&on()){b.b1=true;b.vz=.040;b.vy=-2.55;say('自陣バウンド',300)}else return point('q')}
+  if(b.b1&&!b.b2&&b.z<=.001&&b.y<=t.net){if(on()){b.b2=true;phase='rally';b.receiver='q';say('PLAY!',300);setTimeout(cpuHit,140)}else return point('q')}
+  if(b.x<t.x||b.x>t.x+t.w||b.y<t.y-t.h*.08||b.y>t.y+t.h*.08)return point('q')
  }else{
-  if(!b.b1&&b.z<=.001){if(b.y<t.net&&on()){b.b1=true;b.vz=.032;b.vy=3.0;say('相手陣バウンド',300)}else return point('p')}
+  if(!b.b1&&b.z<=.001){if(b.y<t.net&&on()){b.b1=true;b.vz=.040;b.vy=2.55;say('相手陣バウンド',300)}else return point('p')}
   if(b.b1&&!b.b2&&b.z<=.001&&b.y>=t.net){if(on()){b.b2=true;phase='rally';b.receiver='p';say('PLAY!',300)}else return point('p')}
-  if(b.b1&&!b.b2&&b.y>t.y+t.h)return point('p')
-  if(b.y>t.y+t.h+t.h*.08||b.x<t.x||b.x>t.x+t.w)return point('p')
+  if(b.x<t.x||b.x>t.x+t.w||b.y<t.y-t.h*.08||b.y>t.y+t.h*.08)return point('p')
  }
  return;
 }
-if(b.z<=.001){if(!on())return point(b.receiver==='p'?'q':'p');let ph=b.y>t.net;if(b.receiver==='q'&&!ph){b.z=.001;b.vz=.034;b.receiver='p'}else if(b.receiver==='p'&&ph){b.z=.001;b.vz=.034;b.receiver='q'}else return point(b.receiver==='p'?'q':'p')}
+if(b.z<=.001){
+ if(!on())return point(b.receiver==='p'?'q':'p');
+ let playerHalf=b.y>t.net;
+ if(b.receiver==='q'&&!playerHalf){b.z=.001;b.vz=.040;b.receiver='p';setTimeout(()=>cpuHit(),120)}
+ else if(b.receiver==='p'&&playerHalf){b.z=.001;b.vz=.040;b.receiver='q'}
+ else return point(b.receiver==='p'?'q':'p');
+}
 if(b.x<t.x||b.x>t.x+t.w||b.y<t.y-t.h*.08||b.y>t.y+t.h+t.h*.08)return point(b.receiver==='p'?'q':'p');
-if(b.receiver==='q'&&b.y<t.net+t.h*.09&&b.z<.14)setTimeout(cpuHit,55);
-if(b.receiver==='p'&&b.y>t.net-t.h*.09&&b.z<.14&&missTimer===0){missTimer=1;setTimeout(()=>{if(missTimer&&phase==='rally')point('q')},650)}}
-function player(px,py,cpu){x.save();x.translate(px,py);x.scale(Math.max(.82,Math.min(1.15,W/360)),Math.max(.82,Math.min(1.15,W/360)));x.strokeStyle='#ddd';x.lineWidth=8;x.lineCap='round';x.beginPath();x.moveTo(-7,18);x.lineTo(-17,57);x.moveTo(7,18);x.lineTo(17,57);x.stroke();x.fillStyle=cpu?'#b63c4b':'#1681a1';x.beginPath();x.roundRect(-23,-30,46,50,8);x.fill();x.fillStyle='#dfbea3';x.beginPath();x.arc(0,-47,16,0,7);x.fill();x.fillStyle='#24282a';x.beginPath();x.arc(0,-52,16,3.2,6.2);x.fill();x.strokeStyle='#dfbea3';x.lineWidth=7;x.beginPath();x.moveTo(-17,-16);x.lineTo(-34,7);x.moveTo(17,-16);x.lineTo(34,5);x.stroke();x.restore()}
-function draw(){x.clearRect(0,0,W,H);let t=T();x.fillStyle='#081119';x.fillRect(0,0,W,H);x.fillStyle='#0e1d23';x.fillRect(t.x+t.w*.1,t.y+t.h,8,H-t.y-t.h-10);x.fillRect(t.x+t.w*.9,t.y+t.h,8,H-t.y-t.h-10);x.fillStyle='#126276';x.fillRect(t.x,t.y,t.w,t.h);x.strokeStyle='#eef5f5';x.lineWidth=2;x.strokeRect(t.x,t.y,t.w,t.h);x.beginPath();x.moveTo(t.x,t.net);x.lineTo(t.x+t.w,t.net);x.moveTo(t.x+t.w/2,t.y);x.lineTo(t.x+t.w/2,t.y+t.h);x.stroke();x.fillStyle='#17272d';x.fillRect(t.x-3,t.net-7,t.w+6,14);x.strokeRect(t.x-3,t.net-7,t.w+6,14);player(t.x+t.w/2,t.y+t.h+58,false);player(t.x+t.w/2,t.y-58,true);let by=b.y-b.z*H*.4; x.fillStyle='#f6efc8';x.beginPath();x.arc(b.x,by,4+b.z*12,0,7);x.fill()}
+if(b.receiver==='p'&&b.y>t.net-t.h*.05&&b.z<.12&&missTimer===0){missTimer=1;setTimeout(()=>{if(missTimer&&phase==='rally')point('q')},800)}
+}function player(px,py,cpu){x.save();x.translate(px,py);x.scale(Math.max(.82,Math.min(1.15,W/360)),Math.max(.82,Math.min(1.15,W/360)));x.strokeStyle='#ddd';x.lineWidth=8;x.lineCap='round';x.beginPath();x.moveTo(-7,18);x.lineTo(-17,57);x.moveTo(7,18);x.lineTo(17,57);x.stroke();x.fillStyle=cpu?'#b63c4b':'#1681a1';x.beginPath();x.roundRect(-23,-30,46,50,8);x.fill();x.fillStyle='#dfbea3';x.beginPath();x.arc(0,-47,16,0,7);x.fill();x.fillStyle='#24282a';x.beginPath();x.arc(0,-52,16,3.2,6.2);x.fill();x.strokeStyle='#dfbea3';x.lineWidth=7;x.beginPath();x.moveTo(-17,-16);x.lineTo(-34,7);x.moveTo(17,-16);x.lineTo(34,5);x.stroke();x.restore()}
+function draw(){x.clearRect(0,0,W,H);let t=T();x.fillStyle='#081119';x.fillRect(0,0,W,H);x.fillStyle='#0e1d23';x.fillRect(t.x+t.w*.1,t.y+t.h,8,H-t.y-t.h-10);x.fillRect(t.x+t.w*.9,t.y+t.h,8,H-t.y-t.h-10);x.fillStyle='#126276';x.fillRect(t.x,t.y,t.w,t.h);x.strokeStyle='#eef5f5';x.lineWidth=2;x.strokeRect(t.x,t.y,t.w,t.h);x.beginPath();x.moveTo(t.x,t.net);x.lineTo(t.x+t.w,t.net);x.moveTo(t.x+t.w/2,t.y);x.lineTo(t.x+t.w/2,t.y+t.h);x.stroke();x.fillStyle='#17272d';x.fillRect(t.x-3,t.net-7,t.w+6,14);x.strokeRect(t.x-3,t.net-7,t.w+6,14);player(t.x+t.w/2,t.y+t.h+58,false);player(t.x+t.w/2,t.y-58,true);let by=b.y-b.z*H*.4; x.fillStyle='#f6efc8';x.beginPath();x.arc(b.x,by,7+b.z*18,0,7);x.fill()}
 function loop(t){let dt=Math.min(.035,(t-last)/1000||.016);last=t;physics(dt);draw();requestAnimationFrame(loop)}
-c.addEventListener('pointerdown',e=>{if(phase==='rally'&&b.receiver==='p')touch={x:e.clientX,y:e.clientY}});c.addEventListener('pointerup',e=>{if(!touch)return;let dx=e.clientX-touch.x,dy=e.clientY-touch.y;touch=null;if(Math.hypot(dx,dy)<18)return;hit(dy<-35?(Math.abs(dx)<55?'drive':'flick'):'push',dx/Math.max(1,W))});document.querySelectorAll('#controls button').forEach(z=>z.onclick=()=>hit(z.dataset.a,z.dataset.a==='push'?0:-.8));serve.onclick=playerServe;next.onclick=()=>{over.style.display='none';if(phase==='matchover')newMatch();else{gn++;resetGame()}};newMatch();requestAnimationFrame(loop)})();
+c.addEventListener('pointerdown',e=>{if(phase==='rally'&&b.receiver==='p')touch={x:e.clientX,y:e.clientY}});c.addEventListener('pointerup',e=>{if(!touch)return;let dx=e.clientX-touch.x,dy=e.clientY-touch.y;touch=null;if(Math.hypot(dx,dy)<12)return;hit(dy<-35?(Math.abs(dx)<55?'drive':'flick'):'push',dx/Math.max(1,W))});document.querySelectorAll('#controls button').forEach(z=>z.onclick=()=>hit(z.dataset.a,z.dataset.a==='push'?0:-.8));serve.onclick=playerServe;next.onclick=()=>{over.style.display='none';if(phase==='matchover')newMatch();else{gn++;resetGame()}};newMatch();requestAnimationFrame(loop)})();
 </script></body></html>
