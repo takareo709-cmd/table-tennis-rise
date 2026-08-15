@@ -1,0 +1,87 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>TABLE TENNIS RISE</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#071014;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff}
+#app{width:min(100vw,520px);height:100dvh;margin:auto;position:relative;overflow:hidden;background:linear-gradient(#13242b,#071014)}
+canvas{width:100%;height:100%;display:block;touch-action:none}
+.top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none}
+.score,.round{background:#061116dd;border:1px solid #ffffff1c;border-radius:14px;padding:8px 11px;backdrop-filter:blur(5px)}
+.score{font-weight:900;font-size:18px}.round{font-size:12px;font-weight:700}
+.msg{position:absolute;top:75px;left:50%;transform:translateX(-50%);font-weight:900;font-size:19px;text-shadow:0 3px 8px #000;pointer-events:none}
+.serve{position:absolute;bottom:78px;left:50%;transform:translateX(-50%);border:0;border-radius:17px;padding:14px 30px;font-size:16px;font-weight:900;background:#fff;color:#081217;box-shadow:0 7px 20px #0007}
+.hint{position:absolute;bottom:18px;left:12px;right:12px;text-align:center;font-size:12px;color:#d8e1e3;pointer-events:none}
+.overlay{position:absolute;inset:0;background:#000a;display:none;align-items:center;justify-content:center}.card{width:80%;padding:28px;border-radius:22px;background:#102229;text-align:center;border:1px solid #ffffff22}.card button{border:0;border-radius:12px;padding:12px 24px;font-weight:900}
+</style></head><body><div id="app"><canvas id="game"></canvas>
+<div class="top"><div class="score">YOU <span id="you">0</span>　CPU <span id="cpu">0</span></div><div class="round">GAME <span id="gameNo">1</span>　🏆 <span id="games">0 - 0</span></div></div>
+<div id="msg" class="msg"></div><button id="serve" class="serve">サーブする</button><div class="hint">ボールが打点サークルに入ったらスワイプ　←→コース　↑強く</div>
+<div id="overlay" class="overlay"><div class="card"><h2 id="ot"></h2><p id="op"></p><button id="ob">続ける</button></div></div></div>
+<script>
+(()=>{"use strict";
+const C=document.getElementById("game"),ctx=C.getContext("2d"),$=id=>document.getElementById(id);
+let W=0,H=0,D=1,last=0,touch=null,phase="serve",server="p",serveN=0,ps=0,cs=0,pg=0,cg=0,game=1,rally=0;
+const b={x:.5,y:.72,z:.035,vx:0,vy:0,vz:0,recv:"cpu",b1:false,b2:false};
+const p={x:.5,target:.5,move:0}, cpu={x:.5,target:.5,move:0};
+function resize(){const r=C.getBoundingClientRect();W=r.width;H=r.height;D=Math.min(devicePixelRatio||1,2);C.width=W*D;C.height=H*D;ctx.setTransform(D,0,0,D,0,0)}addEventListener("resize",resize);resize();
+function T(){return{x:W*.07,y:H*.20,w:W*.86,h:H*.53,net:H*.455}}
+function clamp(v,a=0,b=1){return Math.max(a,Math.min(b,v))}
+function ui(){$("you").textContent=ps;$("cpu").textContent=cs;$("games").textContent=pg+" - "+cg;$("gameNo").textContent=game}
+function say(s,ms=600){$("msg").textContent=s;clearTimeout(say.t);if(ms)say.t=setTimeout(()=>$("msg").textContent="",ms)}
+function nextServer(){serveN++;if(serveN>=2){serveN=0;server=server==="p"?"c":"p"}}
+function resetPoint(){phase="serve";b.b1=b.b2=false;p.x=.5;p.target=.5;cpu.x=.5;cpu.target=.5;$("serve").style.display=server==="p"?"block":"none";say(server==="p"?"あなたのサーブ":"CPUサーブ",500);if(server==="c")setTimeout(cpuServe,700)}
+function resetGame(){ps=cs=0;rally=0;server="p";serveN=0;resetPoint();ui()}
+function newMatch(){pg=cg=0;game=1;resetGame()}
+function point(w){if(w==="p")ps++;else cs++;ui();say(w==="p"?"POINT!":"CPU POINT",700);if((ps>=11||cs>=11)&&Math.abs(ps-cs)>=2){const win=ps>cs;if(win)pg++;else cg++;ui();const done=pg>=2||cg>=2;phase=done?"matchover":"gameover";$("overlay").style.display="flex";$("ot").textContent=done?(win?"🏆 MATCH WIN":"MATCH LOST"):(win?"GAME WON":"GAME LOST");$("op").textContent=done?`3ゲームマッチ　${pg} - ${cg}`:`GAME ${game}　${ps} - ${cs}`;$("ob").textContent=done?"もう一度":"次のゲーム";return}nextServer();resetPoint()}
+function launch(target,fromPlayer){Object.assign(b,{x:.5,y:fromPlayer?.74:.26,z:.035,vx:(target-.5)*.17,vy:fromPlayer?-.205:.205,vz:.0165,recv:fromPlayer?"cpu":"player",b1:false,b2:false});phase="serveFlight"}
+function playerServe(){if(phase!=="serve"||server!=="p")return;$("serve").style.display="none";launch(.14+Math.random()*.72,true);say("SERVE",500)}
+function cpuServe(){if(phase!=="serve"||server!=="c")return;launch(.14+Math.random()*.72,false);say("CPU SERVE",500)}
+function playerHit(dx,dy){if(phase!=="rally"||b.recv!=="player"||b.y<.54||b.y>.91||b.z>.18)return;const d=Math.hypot(dx,dy)||1,nx=dx/d,ny=dy/d;const target=clamp(b.x+nx*.38);const timing=clamp(1-Math.abs(b.y-.78)/.20,.15,1);const power=clamp(.48+timing*.45+Math.max(0,-ny)*.12,.4,1);p.target=target;b.recv="cpu";b.vx=(target-b.x)*.19;b.vy=-(.20+.035*power);b.vz=.015+.004*power;rally++;ui();say(timing>.82?"NICE SHOT!":"RETURN",350)}
+function cpuHit(){if(phase!=="rally"||b.recv!=="cpu")return;cpu.target=clamp(b.x+(Math.random()-.5)*.5);b.recv="player";b.vx=(cpu.target-b.x)*.19;b.vy=.20+Math.random()*.016;b.vz=.015+.003*Math.random();rally++;ui()}
+function physics(dt){if(phase!=="serveFlight"&&phase!=="rally")return;
+ b.x+=b.vx*dt*60;b.y+=b.vy*dt*60;b.z+=b.vz*dt*60;b.vz-=.00102*dt*60;
+ // smooth player/cpu movement follows target rather than teleporting
+ p.x+=(p.target-p.x)*Math.min(1,dt*10);cpu.x+=(cpu.target-cpu.x)*Math.min(1,dt*8);
+ if(b.z<=0){b.z=0;const on=b.x>=.035&&b.x<=.965&&b.y>=0&&b.y<=1;if(!on){point(b.recv==="player"?"c":"p");return}
+  if(phase==="serveFlight"){
+   if(server==="p"){if(!b.b1&&b.y>.455){b.b1=true;b.vz=.0165;return}if(b.b1&&b.y<.455&&!b.b2){b.b2=true;phase="rally";b.recv="cpu";setTimeout(cpuHit,520);return}}
+   else{if(!b.b1&&b.y<.455){b.b1=true;b.vz=.0165;return}if(b.b1&&b.y>.455&&!b.b2){b.b2=true;phase="rally";b.recv="player";return}}
+   point(server==="p"?"c":"p");return
+  }
+  const valid=(b.recv==="player"&&b.y>.455)||(b.recv==="cpu"&&b.y<.455);
+  if(!valid){point(b.recv==="player"?"c":"p");return}
+  b.vz=.0165;if(b.recv==="cpu")setTimeout(cpuHit,520)
+ }
+ if(b.x<-.05||b.x>1.05||b.y<-.07||b.y>1.07)point(b.recv==="player"?"c":"p")
+}
+function drawCourt(){const t=T(),fl=t.x+t.w*.11,fr=t.x+t.w*.89,nl=t.x,nr=t.x+t.w;
+ ctx.fillStyle="#071116";ctx.fillRect(0,0,W,H);
+ // floor + court perspective
+ ctx.fillStyle="#0c1a1f";ctx.fillRect(0,t.y+t.h*.96,W,H);
+ ctx.fillStyle="#0d6877";ctx.beginPath();ctx.moveTo(fl,t.y);ctx.lineTo(fr,t.y);ctx.lineTo(nr,t.y+t.h);ctx.lineTo(nl,t.y+t.h);ctx.closePath();ctx.fill();
+ ctx.strokeStyle="#f4f8f8";ctx.lineWidth=2;ctx.stroke();
+ // white side/end lines
+ ctx.beginPath();ctx.moveTo((fl+fr)/2,t.y);ctx.lineTo((nl+nr)/2,t.y+t.h);ctx.stroke();
+ // net and posts
+ ctx.fillStyle="#17262b";ctx.fillRect(nl-3,t.net-7,nr-nl+6,14);ctx.strokeStyle="#e8eeee";ctx.strokeRect(nl-3,t.net-7,nr-nl+6,14);
+ ctx.fillStyle="#182a30";ctx.fillRect(nl-6,t.net-11,5,18);ctx.fillRect(nr+1,t.net-11,5,18);
+ // legs
+ ctx.strokeStyle="#27393f";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(nl+t.w*.16,t.y+t.h);ctx.lineTo(nl+t.w*.16,H-22);ctx.moveTo(nr-t.w*.16,t.y+t.h);ctx.lineTo(nr-t.w*.16,H-22);ctx.stroke();
+ // target circle
+ if(phase==="rally"&&b.recv==="player"){const bx=nl+b.x*t.w,by=t.y+b.y*t.h;ctx.strokeStyle="#fff9";ctx.lineWidth=2;ctx.beginPath();ctx.arc(bx,by,27,0,Math.PI*2);ctx.stroke()}
+}
+function drawPlayer(px,py,isCpu,scale,lean){ctx.save();ctx.translate(px,py);ctx.rotate(lean*.12);ctx.scale(scale,scale);
+ ctx.fillStyle=isCpu?"#b63c4c":"#16839d";ctx.beginPath();ctx.roundRect(-22,-28,44,52,9);ctx.fill();
+ ctx.fillStyle="#e0c0a5";ctx.beginPath();ctx.arc(0,-44,16,0,Math.PI*2);ctx.fill();ctx.fillStyle="#202427";ctx.beginPath();ctx.arc(0,-49,16,Math.PI,Math.PI*2);ctx.fill();
+ ctx.strokeStyle="#e0c0a5";ctx.lineWidth=8;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-16,-10);ctx.lineTo(-31,15);ctx.moveTo(16,-10);ctx.lineTo(31,15);ctx.stroke();
+ ctx.strokeStyle="#dfe5e6";ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(-8,22);ctx.lineTo(-16,50);ctx.moveTo(8,22);ctx.lineTo(16,50);ctx.stroke();
+ // racket
+ ctx.strokeStyle="#b78355";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(31,14);ctx.lineTo(41,29);ctx.stroke();ctx.fillStyle="#8b5137";ctx.beginPath();ctx.ellipse(43,10,8,11,.3,0,Math.PI*2);ctx.fill();
+ ctx.restore()}
+function drawBall(){const t=T(),px=t.x+b.x*t.w,py=t.y+b.y*t.h,r=5.8+b.z*17;ctx.fillStyle="#0007";ctx.beginPath();ctx.ellipse(px+2,py+5,r*1.15,r*.45,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff1a8";ctx.beginPath();ctx.arc(px,py-b.z*H*.14,r,0,Math.PI*2);ctx.fill()}
+function draw(){drawCourt();const t=T();drawPlayer(t.x+t.w*.5+p.x*.01,t.y+t.h+58,false,Math.max(.75,Math.min(1.04,W/390)),p.target-p.x);drawPlayer(t.x+t.w*.5+cpu.x*.01,t.y-52,true,Math.max(.75,Math.min(1.04,W/390)),cpu.target-cpu.x);drawBall()}
+function loop(ts){const dt=Math.min(.033,(ts-last)/1000||.016);last=ts;physics(dt);draw();requestAnimationFrame(loop)}
+C.addEventListener("pointerdown",e=>{if(phase==="rally"&&b.recv==="player")touch={x:e.clientX,y:e.clientY}});
+C.addEventListener("pointerup",e=>{if(!touch)return;const dx=e.clientX-touch.x,dy=e.clientY-touch.y;touch=null;if(Math.hypot(dx,dy)>12)playerHit(dx,dy)});
+$("serve").onclick=playerServe;
+$("ob").onclick=()=>{$("overlay").style.display="none";if(phase==="matchover")newMatch();else{game++;resetGame()}};
+newMatch();requestAnimationFrame(loop);
+})();
+</script></body></html>
